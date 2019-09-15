@@ -6,6 +6,8 @@
 
 #define TIMEZONE 9
 
+#define ADC_IN  A0
+
 Serial gps(D1, D0);       // tx, rx
 Serial pc(USBTX, USBRX);    // tx, rx
 int k,rlock,mode;
@@ -15,21 +17,24 @@ float w_time,hokui,tokei;
 float g_hokui,g_tokei;
 float d_hokui,m_hokui,d_tokei,m_tokei;
 unsigned char c;
+short count = 1;
 
 int gpstime,h,m;
 
+DigitalOut nixie_dot(D11);
+
 DigitalOut Anode_Pins[4]={
-    DigitalOut(D12),
-    DigitalOut(D11),
-    DigitalOut(D10),
+    DigitalOut(D7),
+    DigitalOut(D8),
     DigitalOut(D9),
+    DigitalOut(D10),
 };
 
 DigitalOut K155ID1_Pins[4]={
-    DigitalOut(D2),
-    DigitalOut(D3),
-    DigitalOut(D4),
+    DigitalOut(D6),
     DigitalOut(D5),
+    DigitalOut(D4),
+    DigitalOut(D3),
 };
 
 const int Num_Array[10][4]{
@@ -88,7 +93,7 @@ void getGPS() {
       gps_data[k]='\0';
       
       if( sscanf(gps_data, "$GPGGA,%f,%f,%c,%f,%c,%d",&w_time,&hokui,&ns,&tokei,&ew,&rlock) >= 1){
-        if(rlock==1 || rlock==1 || rlock==2){
+        if(rlock==1|| rlock==2){
           //pc.printf("Status:Lock(%d)\n\r",rlock);
           
           /*
@@ -107,11 +112,13 @@ void getGPS() {
           g_hokui=d_hokui+m_hokui;
           //pc.printf("Lon:%.6f, Lat:%.6f\n\r",g_tokei, g_hokui);
           */
+          
           gpstime=(w_time/100);     //while(1)からこっちに移した
           h = gpstime/100 + TIMEZONE;
           if (h>=24) h-=24;
           m = gpstime % 100;
           
+          nixie_dot = !nixie_dot;
         }
         else{
           //pc.printf("\n\rStatus:unLock(%d)\n\r",rlock);
@@ -124,7 +131,8 @@ void getGPS() {
 }
 
 int main(){
-    pc.printf("*** GPS GT-720F ***");
+    nixie_dot = 0;
+
     gps.baud(9600);
     //  pc.baud(115200);
     gps.attach(getGPS,Serial::RxIrq);
@@ -137,7 +145,18 @@ int main(){
         m = gpstime % 100;
         */
         //pc.printf("%d,Hour%d,Min%d\n\r",gpstime,h,m);
-        
+        if(rlock==0){
+            
+            AnalogIn adcIn(ADC_IN);
+            float adc = adcIn.read() * 250.8;
+            int num =(int)adc;
+            //pc.printf("v=%d \r\n" ,num);
+            h = num/100;
+            m = num%100;
+        }
+        else{
+            
+            }
         display_numbers(h,m);
         }
     
